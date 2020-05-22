@@ -3123,7 +3123,7 @@ class KineticsFamily(Database):
         return True
 
     def generate_tree(self, rxns=None, obj=None, thermo_database=None, T=1000.0, nprocs=1, min_splitable_entry_num=2,
-                      min_rxns_to_spawn=20, max_batch_size=800, outlier_fraction=0.02, stratum_num=8,
+                      min_rxns_to_spawn=20, max_batch_size=1000, outlier_fraction=0.02, stratum_num=8,
                       max_rxns_to_reopt_node=100):
         """
         Generate a tree by greedy optimization based on the objective function obj
@@ -3182,7 +3182,7 @@ class KineticsFamily(Database):
                 self.make_tree_nodes(template_rxn_map=template_rxn_map, obj=obj, T=T, nprocs=nprocs - 1, depth=0,
                                      min_splitable_entry_num=min_splitable_entry_num, min_rxns_to_spawn=min_rxns_to_spawn)
 
-    def get_rxn_batches(self, rxns, T=1000.0, max_batch_size=800, outlier_fraction=0.02, stratum_num=8):
+    def get_rxn_batches(self, rxns, T=1000.0, max_batch_size=1000, outlier_fraction=0.02, stratum_num=8):
         """
         Breaks reactions into batches based on a modified stratified sampling scheme
         Effectively:
