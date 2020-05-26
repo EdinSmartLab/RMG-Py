@@ -55,23 +55,23 @@ COMPOSITE = CompositeLevelOfTheory(
 )
 
 # Representations corresponding to instances
-FREQ_REPR = "LevelOfTheory(method='wb97xd',basis='def2tzvp',software='gaussian',args=('verytight',))"
-ENERGY_REPR = "LevelOfTheory(method='dlpnoccsd(t)f12',basis='def2tzvp',software='orca')"
+FREQ_REPR = "LevelOfTheory(method='wB97X-D',basis='def2-TZVP',software='Gaussian 16',args='very-tight')"
+ENERGY_REPR = "LevelOfTheory(method='DLPNO-CCSD(T)-F12',basis='def2-TZVP',software='Orca')"
 COMPOSITE_REPR = f"CompositeLevelOfTheory(freq={FREQ_REPR},energy={ENERGY_REPR})"
 
 # Dictionaries corresponding to instances
 FREQ_DICT = {
     'class': 'LevelOfTheory',
-    'method': 'wb97xd',
-    'basis': 'def2tzvp',
-    'software': 'gaussian',
-    'args': ['verytight']  # This is a list instead of tuple because that's what YAML files expect
+    'method': 'wB97X-D',
+    'basis': 'def2-TZVP',
+    'software': 'Gaussian 16',
+    'args': 'very-tight'
 }
 ENERGY_DICT = {
     'class': 'LevelOfTheory',
-    'method': 'dlpnoccsd(t)f12',
-    'basis': 'def2tzvp',
-    'software': 'orca',
+    'method': 'DLPNO-CCSD(T)-F12',
+    'basis': 'def2-TZVP',
+    'software': 'Orca',
 }
 COMPOSITE_DICT = {
     'class': 'CompositeLevelOfTheory',
@@ -80,8 +80,8 @@ COMPOSITE_DICT = {
 }
 
 # Model chemistries corresponding to instances
-FREQ_MODELCHEM = 'wb97xd/def2tzvp'
-ENERGY_MODELCHEM = 'dlpnoccsd(t)f12/def2tzvp'
+FREQ_MODELCHEM = 'wB97X-D/def2-TZVP'
+ENERGY_MODELCHEM = 'DLPNO-CCSD(T)-F12/def2-TZVP'
 COMPOSITE_MODELCHEM = f'{ENERGY_MODELCHEM}//{FREQ_MODELCHEM}'
 
 
@@ -94,10 +94,10 @@ class TestLevelOfTheory(unittest.TestCase):
         """
         Test that instance behaves correctly.
         """
-        self.assertEqual(FREQ.method, 'wb97xd')
-        self.assertEqual(FREQ.basis, 'def2tzvp')
-        self.assertEqual(FREQ.software, 'gaussian')
-        self.assertTupleEqual(FREQ.args, ('verytight',))
+        self.assertEqual(FREQ.method, 'wB97X-D')
+        self.assertEqual(FREQ.basis, 'def2-TZVP')
+        self.assertEqual(FREQ.software, 'Gaussian 16')
+        self.assertEqual(FREQ.args, 'very-tight')
         with self.assertRaises(FrozenInstanceError):
             FREQ.method = ''
 
@@ -125,6 +125,16 @@ class TestLevelOfTheory(unittest.TestCase):
         self.assertNotEqual(FREQ, ENERGY)
         with self.assertRaises(TypeError):
             _ = ENERGY > FREQ
+
+        # Test that equality does not depend on spaces, hyphens, and capitalization
+        lot = LevelOfTheory(
+            method='w b  97xd',
+            basis='def2-tzvp',
+            software='gau',
+            args=['VeryTight']
+        )
+        self.assertEqual(lot, FREQ)
+        self.assertEqual(hash(lot), hash(FREQ))
 
         # Test args in different order
         lot1 = LevelOfTheory('method', args=('arg1', 'arg2'))
@@ -155,7 +165,7 @@ class TestLevelOfTheory(unittest.TestCase):
             method='CBS-QB3',
             software='g16'
         )
-        self.assertEqual(lot.to_model_chem(), 'cbsqb3')
+        self.assertEqual(lot.to_model_chem(), 'CBS-QB3')
 
     def test_update(self):
         """
@@ -163,7 +173,7 @@ class TestLevelOfTheory(unittest.TestCase):
         """
         lot = FREQ.update(software='Q-Chem')
         self.assertIsNot(lot, FREQ)
-        self.assertEqual(lot.software, 'qchem')
+        self.assertEqual(lot.software, 'Q-Chem')
         with self.assertRaises(TypeError):
             FREQ.update(test='test')
 

@@ -36,7 +36,7 @@ from __future__ import annotations
 import os
 import yaml
 from dataclasses import dataclass, Field, fields, MISSING, replace
-from typing import Iterable, Union
+from typing import Iterable, Tuple, Union
 
 from rmgpy import settings
 from rmgpy.rmgobject import RMGObject
@@ -72,14 +72,12 @@ class LOT(RMGObject):
 
     def __repr__(self) -> str:
         """
-        Don't include attributes that are set to their default values,
-        and don't include spaces.
+        Don't include attributes that are set to their default values.
         """
-        r = (self.__class__.__qualname__ + '('
-             + ','.join(f"{f.name}={getattr(self, f.name)!r}" for f in fields(self)
-                        if f.repr and f.init and not self._is_default(f))
-             + ')')
-        return r.replace(' ', '')
+        return (self.__class__.__qualname__ + '('
+                + ','.join(f"{f.name}={getattr(self, f.name)!r}" for f in fields(self)
+                           if f.repr and f.init and not self._is_default(f))
+                + ')')
 
     def update(self, **kwargs) -> LOT:
         """
@@ -122,26 +120,44 @@ class LevelOfTheory(LOT):
 
     def __post_init__(self):
         """
-        Standardize attribute values and check if software is set.
-
-        __post_init__ should allow mutating attributes of frozen
-        instances, but it doesn't, so use object.__setattr__ to get
-        around that issue.
+        Check if software is set.
         """
-        for attr, val in self.__dict__.items():
-            if val is not None:
-                if attr == 'software':
-                    std_fn = get_software_id
-                elif attr == 'args':  # Standardize and sort args to make unique; convert to tuple
-                    def std_fn(args):
-                        args = (args,) if isinstance(args, str) else args
-                        return tuple(sorted(standardize_name(a) for a in args))
-                else:
-                    std_fn = standardize_name
-                object.__setattr__(self, attr, std_fn(val))
-
-        if self.method in METHODS_THAT_REQUIRE_SOFTWARE and self.software is None:
+        if self._get_std_val('method') in METHODS_THAT_REQUIRE_SOFTWARE and self.software is None:
             raise ValueError(f'Software must be set when using {self.method} method')
+
+    def __eq__(self, other: LevelOfTheory) -> bool:
+        """
+        Override the automatically generated __eq__ method such that
+        equality is checked using the standardized representations of
+        the attributes.
+        """
+        if other.__class__ is self.__class__:
+            self_tuple = tuple(self._get_std_val(f.name) for f in fields(self) if f.compare)
+            other_tuple = tuple(other._get_std_val(f.name) for f in fields(other) if f.compare)
+            return self_tuple == other_tuple
+        return NotImplemented
+
+    def __hash__(self) -> int:
+        """
+        Override __hash__ such that it uses the standardized attribute
+        representations.
+        """
+        return hash(tuple(self._get_std_val(f.name) for f in fields(self) if (f.compare if f.hash is None else f.hash)))
+
+    def _get_std_val(self, attr: str) -> Union[None, int, float, str, Tuple[str, ...]]:
+        """Get standardized value of attribute"""
+        val = getattr(self, attr)
+        if val is not None:
+            if attr == 'software':
+                std_fn = get_software_id
+            elif attr == 'args':  # Standardize and sort args to make unique; convert to tuple
+                def std_fn(args):
+                    args = (args,) if isinstance(args, str) else args
+                    return tuple(sorted(standardize_name(a) for a in args))
+            else:
+                std_fn = standardize_name
+            return std_fn(val)
+        return val
 
     def simple(self) -> LevelOfTheory:
         """
@@ -152,7 +168,7 @@ class LevelOfTheory(LOT):
         Returns:
             New instance with only method and basis attributes set.
         """
-        if self.method in METHODS_THAT_REQUIRE_SOFTWARE:
+        if self._get_std_val('method') in METHODS_THAT_REQUIRE_SOFTWARE:
             return LevelOfTheory(method=self.method, basis=self.basis, software=self.software)
         else:
             return LevelOfTheory(method=self.method, basis=self.basis)
